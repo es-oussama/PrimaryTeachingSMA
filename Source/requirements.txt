@@ -1,0 +1,36 @@
+# ============================================================
+# PrimaryTeachingSMA - Requirements
+# Testé sur Python 3.11+ / 3.13
+# ============================================================
+
+# --- Core AI Framework ---
+crewai>=0.63.0
+crewai-tools>=0.14.0
+
+# --- LangChain ---
+langchain>=0.2.0
+langchain-community>=0.2.0
+langchain-anthropic>=0.1.15
+
+# --- Anthropic Claude API ---
+anthropic>=0.25.9
+
+# --- RAG: Vector Store & Embeddings ---
+chromadb>=0.5.0
+sentence-transformers>=3.0.0
+
+# --- PDF Processing & Generation ---
+pypdf>=4.2.0
+reportlab>=4.2.0
+
+# --- Interface ---
+streamlit>=1.35.0
+
+# --- Image Generation (exercices visuels, local, sans API) ---
+Pillow>=10.0.0
+
+# --- Utilities ---
+python-dotenv>=1.0.1
+pydantic>=2.7.1
+requests>=2.31.0
+tiktoken>=0.7.0

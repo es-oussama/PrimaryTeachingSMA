@@ -1,0 +1,142 @@
+{
+  "name": "PrimaryTeachingSMA — Webhook to PDF",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "primary-teaching",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node_webhook",
+      "name": "Webhook — Receive Request",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "primary-teaching-webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate and extract incoming payload\nconst body = $input.first().json.body || $input.first().json;\n\nconst age          = parseInt(body.age) || 8;\nconst level        = body.level        || 'CE2';\nconst activityType = body.activity_type || 'logique';\nconst objective    = body.objective    || 'Développer la pensée logique';\nconst outputDir    = body.output_dir   || './outputs';\n\n// Basic validation\nif (age < 5 || age > 12) {\n  throw new Error(`Age invalide : ${age}. Attendu entre 5 et 12.`);\n}\n\nreturn [\n  {\n    json: {\n      age,\n      level,\n      activity_type: activityType,\n      objective,\n      output_dir: outputDir,\n      validated_at: new Date().toISOString()\n    }\n  }\n];"
+      },
+      "id": "node_validate",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "command": "=cd /d D:\\PrimaryTeachingSMA\\Source && venv\\Scripts\\python.exe -c \"\nimport json, sys\nsys.path.insert(0, '.')\nfrom workflow import trigger_n8n_workflow\npayload = {{ 'age': {{ $json.age }}, 'level': '{{ $json.level }}', 'activity_type': '{{ $json.activity_type }}', 'objective': '{{ $json.objective }}', 'output_dir': '{{ $json.output_dir }}' }}\nresult = trigger_n8n_workflow(payload)\nprint(json.dumps(result, ensure_ascii=False))\n\""
+      },
+      "id": "node_execute",
+      "name": "Execute Python Workflow",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Python stdout output\nconst stdout = $input.first().json.stdout || '{}';\nlet result;\n\ntry {\n  result = JSON.parse(stdout.trim());\n} catch (e) {\n  result = {\n    error: 'Failed to parse Python output',\n    raw: stdout,\n    success: false\n  };\n}\n\nconst success = !!result.pdf_path && !result.error;\n\nreturn [\n  {\n    json: {\n      success,\n      pdf_path:      result.pdf_path     || null,\n      duration_sec:  result.duration_sec || null,\n      fallback_used: result.fallback_used || false,\n      rag_chars:     result.rag_chars    || 0,\n      log_path:      result.log_path     || null,\n      error:         result.error        || null,\n      generated_at:  new Date().toISOString()\n    }\n  }\n];"
+      },
+      "id": "node_parse",
+      "name": "Parse Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "id": "node_respond",
+      "name": "Return Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"success\": false, \"error\": \"{{ $json.message }}\", \"timestamp\": \"{{ new Date().toISOString() }}\" }",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "node_error",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [900, 500]
+    }
+  ],
+  "connections": {
+    "Webhook — Receive Request": {
+      "main": [
+        [{"node": "Validate Input", "type": "main", "index": 0}]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [{"node": "Execute Python Workflow", "type": "main", "index": 0}]
+      ]
+    },
+    "Execute Python Workflow": {
+      "main": [
+        [{"node": "Parse Result", "type": "main", "index": 0}]
+      ],
+      "error": [
+        [{"node": "Error Response", "type": "main", "index": 0}]
+      ]
+    },
+    "Parse Result": {
+      "main": [
+        [{"node": "Return Response", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": ""
+  },
+  "meta": {
+    "instanceId": "primaryteachingsma-n8n-v1",
+    "templateCredsSetupCompleted": false
+  },
+  "tags": [
+    {"name": "PrimaryTeachingSMA"},
+    {"name": "Education"},
+    {"name": "AI-Agents"}
+  ],
+  "_comment": {
+    "usage": "Import this file in n8n via Settings > Import Workflow",
+    "endpoint": "POST http://localhost:5678/webhook/primary-teaching",
+    "payload_example": {
+      "age": 8,
+      "level": "CE2",
+      "activity_type": "Logique & Raisonnement",
+      "objective": "Développer la pensée algorithmique chez l'enfant",
+      "output_dir": "./outputs"
+    },
+    "response_example": {
+      "success": true,
+      "pdf_path": "./outputs/fiche_pedagogique_20260514_103205.pdf",
+      "duration_sec": 42.5,
+      "fallback_used": false,
+      "rag_chars": 2340
+    }
+  }
+}
